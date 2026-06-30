@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
@@ -16,7 +16,7 @@ const DEFAULT_CONFIG = JSON.stringify(
 const API_URL = "http://localhost:8000/transform";
 
 // ---------------------------------------------------------------------------
-// Styles (plain objects — no external CSS lib needed)
+// Styles (plain objects - no external CSS lib needed)
 // ---------------------------------------------------------------------------
 const S = {
   h1:      { fontSize: 22, marginBottom: 4 },
@@ -116,8 +116,8 @@ export default function Home() {
           onChange={(e) => setCsvFile(e.target.files[0] ?? null)}
         />
 
-        {/* Resume input — multiple files allowed */}
-        <label style={S.label}>Resume files — PDF or DOCX (optional, multiple allowed)</label>
+        {/* Resume input - multiple files allowed */}
+        <label style={S.label}>Resume files - PDF or DOCX (optional, multiple allowed)</label>
         <input
           style={S.input}
           type="file"
@@ -127,7 +127,7 @@ export default function Home() {
         />
 
         {/* Recruiter notes input */}
-        <label style={S.label}>Recruiter notes — .txt (optional, multiple allowed)</label>
+        <label style={S.label}>Recruiter notes - .txt (optional, multiple allowed)</label>
         <input
           style={S.input}
           type="file"
@@ -156,7 +156,7 @@ export default function Home() {
       </form>
 
       {/* Loading state */}
-      {loading && <p style={S.status}>Running pipeline — this may take a moment…</p>}
+      {loading && <p style={S.status}>Running pipeline - this may take a moment…</p>}
 
       {/* Error display */}
       {error && <p style={S.error}>Error: {error}</p>}

@@ -1,5 +1,5 @@
-"""
-test_pipeline.py — pytest suite for the candidate data transformer.
+﻿"""
+test_pipeline.py - pytest suite for the candidate data transformer.
 
 Covers (per spec):
   - Happy path: full pipeline produces the expected number of candidates
@@ -36,7 +36,7 @@ def full_results():
     """
     Run the full pipeline once (CSV + resumes + default config) and share the
     result across all tests in this module.  scope="module" means the pipeline
-    runs exactly once — not once per test — which keeps the suite fast.
+    runs exactly once - not once per test - which keeps the suite fast.
     """
     from transformer.pipeline import run
     return run(csv_path=SAMPLE_CSV, resumes_dir=RESUMES_DIR, config=DEFAULT_CFG)
@@ -68,7 +68,7 @@ class TestHappyPath:
         assert len(ids) == len(set(ids)), "Duplicate candidate_ids found"
 
     def test_priya_merged_has_resume_skills(self, full_results):
-        """Priya appears in both CSV and resume — skills come from resume."""
+        """Priya appears in both CSV and resume - skills come from resume."""
         priya = _by_name(full_results, "Priya Sharma")
         assert priya is not None
         skill_names = [s["name"] for s in priya["skills"]]
@@ -86,7 +86,7 @@ class TestHappyPath:
         assert "Indian Institute of Technology" in priya["education"][0]["institution"]
 
     def test_kiran_is_resume_only_candidate(self, full_results):
-        """Kiran Rao exists only in a resume — still produces a valid profile."""
+        """Kiran Rao exists only in a resume - still produces a valid profile."""
         kiran = _by_name(full_results, "Kiran Rao")
         assert kiran is not None
         assert "kiran.rao@email.com" in kiran["emails"]
@@ -258,7 +258,7 @@ class TestCustomConfigProjection:
         }
         results = run(csv_path=SAMPLE_CSV, resumes_dir=RESUMES_DIR, config=cfg)
         names = [r["full_name"] for r in results]
-        assert "Ravi Kumar" not in names   # skipped — no email
+        assert "Ravi Kumar" not in names   # skipped - no email
         assert "Priya Sharma" in names     # still present
 
     def test_array_path_extracts_list_of_values(self):
@@ -309,7 +309,7 @@ class TestNormalization:
         assert sneha["phones"] == []
 
     def test_candidate_with_no_email_matched_by_phone(self, full_results):
-        """Ravi Kumar has no email — phone becomes the match key."""
+        """Ravi Kumar has no email - phone becomes the match key."""
         ravi = _by_name(full_results, "Ravi Kumar")
         assert ravi is not None
         assert ravi["emails"] == []
@@ -375,7 +375,7 @@ class TestConfidenceScoring:
 
 class TestExtractors:
     """
-    Direct unit tests for extractor internals — covers regressions found via
+    Direct unit tests for extractor internals - covers regressions found via
     real resume input that the pipeline-level tests would not isolate clearly.
     """
 

@@ -1,10 +1,3 @@
-"""
-main.py — FastAPI application entry point.
-
-Run with:
-    uvicorn backend.api.main:app --reload --port 8000
-"""
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -16,7 +9,7 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# Allow the Next.js dev server to call this API without browser CORS errors.
+# Allows the Next.js dev server on :3000 to call this API without CORS errors.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],

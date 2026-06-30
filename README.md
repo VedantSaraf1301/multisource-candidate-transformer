@@ -1,6 +1,6 @@
 # Multi-Source Candidate Data Transformer
 
-A Python pipeline that ingests recruiter data from three independent sources - a structured CSV, unstructured resume files (PDF/DOCX), and free-text recruiter notes (.txt) — merges them into canonical candidate profiles, and emits validated JSON.
+A Python pipeline that ingests recruiter data from three independent sources - a structured CSV, unstructured resume files (PDF/DOCX), and free-text recruiter notes (.txt) - merges them into canonical candidate profiles, and emits validated JSON.
 
 Built as a take-home assignment for the Eightfold AI Engineering Intern role.
 
@@ -37,7 +37,7 @@ eightfoldAI/
 │   ├── default_config.json     # Full schema output with confidence + provenance
 │   └── example_custom_config.json  # Remapped/filtered output example
 ├── tests/
-│   └── test_pipeline.py        # 38 pytest tests
+│   └── test_pipeline.py        # 42 pytest tests
 ├── cli.py                      # Command-line interface
 ├── requirements.txt
 └── output.json                 # Sample output from a full 3-source run
@@ -121,7 +121,7 @@ results = run(
 
 The web UI has two parts: a FastAPI backend and a Next.js frontend. Start them in separate terminals.
 
-### Terminal 1 — Backend (FastAPI)
+### Terminal 1 - Backend (FastAPI)
 
 ```bash
 # From the project root, with venv active
@@ -129,7 +129,7 @@ uvicorn backend.api.main:app --reload
 # Listens on http://localhost:8000
 ```
 
-### Terminal 2 — Frontend (Next.js)
+### Terminal 2 - Frontend (Next.js)
 
 ```bash
 cd frontend
@@ -146,7 +146,7 @@ Open [http://localhost:3000](http://localhost:3000) in a browser. Upload a CSV, 
 
 ```bash
 pytest tests/test_pipeline.py -v
-# 38 tests — should all pass
+# 42 tests - should all pass
 ```
 
 ---
@@ -165,7 +165,7 @@ Notes (.txt) ─────┘
 
 ### 1. Extract
 
-Each source has a dedicated extractor that returns a typed dataclass and never raises — a missing or corrupt file logs a warning and returns `None` / `[]`.
+Each source has a dedicated extractor that returns a typed dataclass and never raises - a missing or corrupt file logs a warning and returns `None` / `[]`.
 
 | Source | Extractor | Output type |
 |--------|-----------|-------------|
@@ -187,7 +187,7 @@ Before merging, every field is normalized:
 **Match key** (priority order):
 1. Normalized email
 2. E.164 phone
-3. Synthetic name key (last resort — first initial + last name)
+3. Synthetic name key (last resort - first initial + last name)
 
 Candidates sharing the same match key are grouped and merged. Duplicate CSV rows for the same email collapse into one profile.
 
@@ -204,7 +204,7 @@ Candidates sharing the same match key are grouped and merged. Duplicate CSV rows
 - Conflict resolved by trust → confidence `0.6`
 - Value derived from date arithmetic (years_experience) → confidence `0.3`
 
-**Candidate ID:** SHA-1 of the match key, truncated to 16 hex characters. Deterministic — same input always produces the same ID.
+**Candidate ID:** SHA-1 of the match key, truncated to 16 hex characters. Deterministic - same input always produces the same ID.
 
 ### 4. Project
 
@@ -290,11 +290,11 @@ The `sample_inputs/` directory contains data designed to exercise every pipeline
 ## Assumptions and Design Decisions
 
 - **Default phone region is India** (`IN`). Numbers without a `+` country code are assumed to be Indian mobile numbers (10 digits).
-- **Resume parsing is heuristic, not ML**. Section headers (`EXPERIENCE`, `SKILLS`, etc.) are detected by keyword matching. Dates are detected by regex. This is intentional — no external NLP dependencies.
-- **Experience years use only closed roles**. An ongoing role (end = `null`) is excluded from `years_experience` calculation for determinism — the current date would make the output non-reproducible.
+- **Resume parsing is heuristic, not ML**. Section headers (`EXPERIENCE`, `SKILLS`, etc.) are detected by keyword matching. Dates are detected by regex. This is intentional - no external NLP dependencies.
+- **Experience years use only closed roles**. An ongoing role (end = `null`) is excluded from `years_experience` calculation for determinism - the current date would make the output non-reproducible.
 - **Match key falls back to a name key** as a last resort when neither email nor phone is available. This is low-precision and marked explicitly in logs.
 - **Notes trust position sits between CSV and resume** for company/title (confirmed by a recruiter but informal), and below resume for skills (recruiter-observed vs. resume-stated).
-- **Recruiter notes are entirely free-text** — no fixed structure is assumed. All patterns are applied to the full document simultaneously.
+- **Recruiter notes are entirely free-text** - no fixed structure is assumed. All patterns are applied to the full document simultaneously.
 
 ## Descoped Items
 
