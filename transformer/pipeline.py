@@ -28,6 +28,7 @@ from typing import Dict, List, Optional, Union
 
 from transformer.extractors.csv_extractor import extract_from_csv
 from transformer.extractors.resume_extractor import extract_from_resume
+from transformer.extractors.notes_extractor import extract_from_notes
 from transformer.merge import merge_candidates
 from transformer.project import project, load_config
 from transformer.validate import validate, ValidationError
@@ -36,6 +37,9 @@ logger = logging.getLogger(__name__)
 
 # File extensions we accept as resume inputs
 _RESUME_EXTENSIONS = {".pdf", ".docx"}
+
+# File extensions we accept as recruiter notes
+_NOTES_EXTENSIONS = {".txt"}
 
 
 # ---------------------------------------------------------------------------
@@ -69,6 +73,7 @@ def _collect_resume_files(resumes_dir: Path) -> List[Path]:
 def run(
     csv_path: Optional[Union[str, Path]] = None,
     resumes_dir: Optional[Union[str, Path]] = None,
+    notes_dir: Optional[Union[str, Path]] = None,
     config: Union[str, Path, dict, None] = None,
 ) -> List[dict]:
     """
@@ -110,13 +115,32 @@ def run(
     else:
         logger.info("No resumes directory provided — skipping resume source.")
 
+    # ── Stage 1c: Extract from recruiter notes ────────────────────────────
+    notes_records = []
+    if notes_dir is not None:
+        notes_path = Path(notes_dir)
+        if notes_path.exists() and notes_path.is_dir():
+            note_files = sorted(
+                f for f in notes_path.iterdir()
+                if f.is_file() and f.suffix.lower() in _NOTES_EXTENSIONS
+            )
+            for nf in note_files:
+                result = extract_from_notes(nf)
+                if result is not None:
+                    notes_records.append(result)
+            logger.info("Notes stage: %d note(s) parsed successfully.", len(notes_records))
+        else:
+            logger.warning("Notes directory not found: %s — skipping.", notes_dir)
+    else:
+        logger.info("No notes directory provided — skipping notes source.")
+
     # Guard: nothing to process
     if not csv_records and not resume_records:
         logger.warning("No records extracted from any source — returning empty output.")
         return []
 
     # ── Stage 2: Merge ───────────────────────────────────────────────────
-    profiles = merge_candidates(csv_records, resume_records)
+    profiles = merge_candidates(csv_records, resume_records, notes_records or None)
     logger.info("Merge stage: %d unique candidate profile(s) produced.", len(profiles))
 
     # ── Stage 3: Load config (done once, shared across all profiles) ──────

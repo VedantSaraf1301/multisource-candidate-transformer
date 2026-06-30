@@ -86,6 +86,15 @@ _DATE_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Year range inside an education block: "2023 – 2027" or "2023 – Present".
+# Group 1 = start year, Group 2 = end year or present-word.
+# Used by _parse_education() to extract the GRADUATION year (group 2), not the
+# admission year (group 1), which is what a plain re.search() for \d{4} would find.
+_EDU_YEAR_RANGE_RE = re.compile(
+    r"\b(\d{4})\s*[-–—]\s*(\d{4}|Present|Current|Now)\b",
+    re.IGNORECASE,
+)
+
 # A date-range line like "Jan 2020 – Dec 2021" or "2019 - Present"
 _DATE_RANGE_RE = re.compile(
     r"("
@@ -259,10 +268,26 @@ def _parse_skills(skills_text: str) -> List[str]:
 
     We avoid splitting on hyphens that sit between word characters (e.g. "Scikit-learn")
     by only replacing bullet/pipe characters, then splitting on commas and newlines.
+
+    Category-label prefixes like "Programming Languages: C, C++, ..." are stripped
+    before splitting so the label never leaks into the first skill on that line.
     """
     # Replace bullet characters and pipes with commas; do NOT replace hyphens
     # because they appear legitimately inside skill names (e.g. "Scikit-learn").
     cleaned = re.sub(r"[•·▪▸\|]+", ",", skills_text)
+
+    # Strip "Category Label:" prefix from each line before splitting on commas.
+    # Lines like "Programming Languages: C, C++, Python" must not produce
+    # "programming languages: c" as the first skill.
+    lines = cleaned.split("\n")
+    stripped_lines = []
+    for line in lines:
+        colon_pos = line.find(":")
+        if colon_pos != -1:
+            line = line[colon_pos + 1:]
+        stripped_lines.append(line)
+    cleaned = "\n".join(stripped_lines)
+
     parts = re.split(r"[,\n]+", cleaned)
     skills = [p.strip() for p in parts if p.strip() and len(p.strip()) > 1]
     return skills
@@ -339,21 +364,41 @@ def _parse_education(edu_text: str) -> List[Dict]:
     Parse education entries. Each entry is expected to be a block with:
     - Institution name
     - Degree and/or field of study
-    - A year (end year)
+    - A year range or single year (end year / graduation year)
+
+    Year-range handling: "2023 – 2027" must produce end_year=2027 (graduation),
+    not 2023 (admission).  The entire range substring is stripped from the block
+    before extracting degree/field so it never leaks into those strings.
     """
     entries = []
     blocks = re.split(r"\n{2,}", edu_text.strip())
+
+    degree_re = re.compile(
+        r"(B\.?Tech|M\.?Tech|B\.?E|M\.?E|B\.?Sc|M\.?Sc|MBA|PhD|"
+        r"Bachelor|Master|Doctor|Diploma|B\.?A|M\.?A)[^\n]*",
+        re.IGNORECASE,
+    )
 
     for block in blocks:
         block = block.strip()
         if not block:
             continue
 
-        # Extract the year
-        year_match = re.search(r"\b(19|20)\d{2}\b", block)
-        end_year = int(year_match.group()) if year_match else None
+        # Detect a year range first so we can take the SECOND year (graduation)
+        # and strip it out before extracting the field-of-study string.
+        range_match = _EDU_YEAR_RANGE_RE.search(block)
+        if range_match:
+            end_str = range_match.group(2)
+            end_year = None if end_str.lower() in ("present", "current", "now") else int(end_str)
+            # Remove the matched range from the block so it doesn't pollute field text
+            clean_block = (block[:range_match.start()] + block[range_match.end():]).strip()
+        else:
+            # No range: fall back to first standalone 4-digit year
+            year_match = re.search(r"\b(19|20)\d{2}\b", block)
+            end_year = int(year_match.group()) if year_match else None
+            clean_block = block
 
-        lines = [l.strip() for l in block.splitlines() if l.strip()]
+        lines = [l.strip() for l in clean_block.splitlines() if l.strip()]
         if not lines:
             continue
 
@@ -362,11 +407,6 @@ def _parse_education(edu_text: str) -> List[Dict]:
         field_of_study = None
 
         # Look for degree keywords in remaining lines
-        degree_re = re.compile(
-            r"(B\.?Tech|M\.?Tech|B\.?E|M\.?E|B\.?Sc|M\.?Sc|MBA|PhD|"
-            r"Bachelor|Master|Doctor|Diploma|B\.?A|M\.?A)[^\n]*",
-            re.IGNORECASE,
-        )
         for line in lines[1:]:
             dm = degree_re.search(line)
             if dm:

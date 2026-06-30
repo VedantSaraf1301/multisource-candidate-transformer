@@ -153,8 +153,8 @@ class TestMissingSourceRobustness:
     def test_nonexistent_csv_does_not_crash(self):
         from transformer.pipeline import run
         results = run(csv_path="nonexistent_file.csv", resumes_dir=RESUMES_DIR)
-        # Only resume candidates: Priya + Kiran
-        assert len(results) == 2
+        # Only resume candidates: Priya + Kiran + Arjun (3 resume files)
+        assert len(results) == 3
 
     def test_nonexistent_resumes_dir_does_not_crash(self):
         from transformer.pipeline import run
@@ -231,10 +231,10 @@ class TestCustomConfigProjection:
             "on_missing": "null",
         }
         results = run(csv_path=SAMPLE_CSV, resumes_dir=RESUMES_DIR, config=cfg)
-        arjun = _by_name(results, "Arjun Mehta")  # CSV-only, no github
-        assert arjun is not None
-        assert "github" in arjun          # key present
-        assert arjun["github"] is None    # value is null
+        ravi = _by_name(results, "Ravi Kumar")  # CSV-only, no github
+        assert ravi is not None
+        assert "github" in ravi          # key present
+        assert ravi["github"] is None    # value is null
 
     def test_on_missing_omit_removes_null_keys(self):
         from transformer.pipeline import run
@@ -247,9 +247,9 @@ class TestCustomConfigProjection:
             "on_missing": "omit",
         }
         results = run(csv_path=SAMPLE_CSV, resumes_dir=RESUMES_DIR, config=cfg)
-        arjun = _by_name(results, "Arjun Mehta")
-        assert arjun is not None
-        assert "github" not in arjun      # key entirely absent
+        ravi = _by_name(results, "Ravi Kumar")  # CSV-only, no github
+        assert ravi is not None
+        assert "github" not in ravi      # key entirely absent
 
     def test_on_missing_error_skips_candidate_without_required_field(self):
         """
@@ -361,9 +361,9 @@ class TestConfidenceScoring:
         assert priya["overall_confidence"] < 1.0
 
     def test_single_source_candidate_has_max_confidence(self, full_results):
-        """Arjun is CSV-only, no conflicts → overall_confidence == 1.0."""
-        arjun = _by_name(full_results, "Arjun Mehta")
-        assert arjun["overall_confidence"] == 1.0
+        """Ravi is CSV-only (no resume match), no conflicts → overall_confidence == 1.0."""
+        ravi = _by_name(full_results, "Ravi Kumar")
+        assert ravi["overall_confidence"] == 1.0
 
     def test_each_skill_has_confidence_in_range(self, full_results):
         priya = _by_name(full_results, "Priya Sharma")
@@ -386,6 +386,79 @@ class TestConfidenceScoring:
 # ══════════════════════════════════════════════════════════════════════════════
 # 7. VALIDATION
 # ══════════════════════════════════════════════════════════════════════════════
+
+class TestExtractors:
+    """
+    Direct unit tests for extractor internals — covers regressions found via
+    real resume input that the pipeline-level tests would not isolate clearly.
+    """
+
+    def test_skills_category_prefix_not_leaked(self):
+        """
+        Lines like 'Programming Languages: C, C++, Python' must not produce
+        a skill called 'programming languages: c'.
+        """
+        from transformer.extractors.resume_extractor import _parse_skills
+        skills_text = (
+            "Programming Languages: C, C++, JavaScript, Python\n"
+            "Frameworks & Libraries: React.js, Node.js, Express\n"
+            "Databases: PostgreSQL, MySQL"
+        )
+        skills = _parse_skills(skills_text)
+        # No skill should contain a colon
+        for s in skills:
+            assert ":" not in s, f"Category prefix leaked into skill: {s!r}"
+        lower_skills = [s.lower() for s in skills]
+        # Category labels must not appear as standalone skills
+        assert "programming languages" not in lower_skills
+        assert "frameworks & libraries" not in lower_skills
+        assert "databases" not in lower_skills
+        # Actual skills must be present (single-char "C" is filtered by the len>1 guard)
+        assert "c++" in lower_skills
+        assert "javascript" in lower_skills
+        assert "react.js" in lower_skills
+
+    def test_education_end_year_is_graduation_not_admission(self):
+        """
+        A block with '2023 – 2027' must produce end_year=2027 (the graduation year),
+        not 2023 (the admission year that a plain re.search would find first).
+        """
+        from transformer.extractors.resume_extractor import _parse_education
+        edu_text = (
+            "Some University\n"
+            "B.E. in Information Science and Engineering 2023 – 2027"
+        )
+        entries = _parse_education(edu_text)
+        assert len(entries) == 1
+        assert entries[0]["end_year"] == 2027, (
+            f"Expected end_year=2027, got {entries[0]['end_year']!r}"
+        )
+
+    def test_education_field_contains_no_year_digits(self):
+        """
+        The field-of-study string must not contain the date range text
+        after the year range is stripped from the block.
+        """
+        from transformer.extractors.resume_extractor import _parse_education
+        edu_text = (
+            "Some University\n"
+            "B.E. in Information Science and Engineering 2023 – 2027"
+        )
+        entries = _parse_education(edu_text)
+        assert len(entries) == 1
+        field = entries[0].get("field") or ""
+        assert not any(ch.isdigit() for ch in field), (
+            f"Year digits leaked into field string: {field!r}"
+        )
+
+    def test_education_ongoing_range_gives_null_end_year(self):
+        """'2023 – Present' must produce end_year=None, not the start year."""
+        from transformer.extractors.resume_extractor import _parse_education
+        edu_text = "State University\nB.Sc in Computer Science 2020 – Present"
+        entries = _parse_education(edu_text)
+        assert len(entries) == 1
+        assert entries[0]["end_year"] is None
+
 
 class TestValidation:
     """validate.py catches malformed output before it reaches the caller."""

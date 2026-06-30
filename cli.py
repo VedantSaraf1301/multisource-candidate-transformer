@@ -74,6 +74,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Path to the directory containing resume files (.pdf and/or .docx).",
     )
     parser.add_argument(
+        "--notes",
+        metavar="DIR",
+        help="Path to directory containing recruiter notes files (.txt).",
+    )
+    parser.add_argument(
         "--config",
         metavar="PATH",
         help=(
@@ -119,7 +124,7 @@ def main() -> int:
     logger = logging.getLogger(__name__)
 
     # At least one source must be provided
-    if not args.csv and not args.resumes:
+    if not args.csv and not args.resumes and not args.notes:
         parser.error("At least one of --csv or --resumes must be provided.")
 
     # Basic existence checks — give friendly errors before calling the pipeline
@@ -137,6 +142,7 @@ def main() -> int:
         results = run(
             csv_path=args.csv,
             resumes_dir=args.resumes,
+            notes_dir=args.notes,
             config=args.config,
         )
     except Exception as exc:

@@ -3,3 +3,6 @@ phonenumbers
 pdfplumber
 python-docx
 pytest
+fastapi
+uvicorn[standard]
+python-multipart

@@ -183,13 +183,14 @@ SKILL_ALIASES: dict[str, str] = {
 
     # Languages
     "golang":           "go",
-    "c++":              "cpp",
+    "cpp":              "c++",    # canonical form is "c++"; "cpp" aliases to it
     "c#":               "csharp",
 
     # APIs / protocols
     "rest apis":        "rest",
     "rest api":         "rest",
     "restful":          "rest",
+    "restful apis":     "rest",
     "graphql api":      "graphql",
 }
 

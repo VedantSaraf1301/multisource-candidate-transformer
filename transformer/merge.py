@@ -7,9 +7,14 @@ Match key rules (in priority order):
   2. Normalized E.164 phone (only when email is absent)
   3. No shared key → records are treated as separate candidates, never merged.
 
-Trust ranking (which source wins when both have conflicting values):
-  CSV wins  : current_company, title, name, email, phone
-  Resume wins: headline, years_experience, skills, education, location, links
+Trust ranking (which source wins when sources conflict):
+  CSV wins    : current_company, title, name, email, phone
+  Resume wins : headline, years_experience, skills, education, location, links
+  Notes sit between CSV and resume:
+    - company/title : notes trust == CSV (recruiter confirmed)
+    - skills        : notes < resume (resume is more complete)
+    - years_exp     : notes explicitly stated → confidence 0.6
+    - location/links: notes → used only if resume has none
 
 Confidence heuristics (intentionally simple — documented in README):
   1.0 — field present in exactly one source, no conflict
@@ -33,6 +38,7 @@ from transformer.normalize import (
 )
 from transformer.extractors.csv_extractor import RawCandidate
 from transformer.extractors.resume_extractor import RawResumeData
+from transformer.extractors.notes_extractor import RawNotesData
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +77,17 @@ def _match_key_for_csv(rec: RawCandidate) -> Optional[str]:
 
 def _match_key_for_resume(rec: RawResumeData) -> Optional[str]:
     """Same logic for resume records."""
+    email = normalize_email(rec.email)
+    if email:
+        return f"email:{email}"
+    phone = normalize_phone(rec.phone)
+    if phone:
+        return f"phone:{phone}"
+    return None
+
+
+def _match_key_for_notes(rec: RawNotesData) -> Optional[str]:
+    """Same logic for recruiter notes records."""
     email = normalize_email(rec.email)
     if email:
         return f"email:{email}"
@@ -357,6 +374,7 @@ def _merge_group(
     csv_recs: List[RawCandidate],
     resume_recs: List[RawResumeData],
     match_key: str,
+    notes_recs: Optional[List[RawNotesData]] = None,
 ) -> CandidateProfile:
     """
     Merge all CSV and resume records that share the same match key into one
@@ -365,11 +383,13 @@ def _merge_group(
     duplicates carry no additional information.
     """
     # Take the first record from each source (duplicates are already grouped here)
-    csv_rec    = csv_recs[0]    if csv_recs    else None
-    resume_rec = resume_recs[0] if resume_recs else None
+    csv_rec    = csv_recs[0]                          if csv_recs    else None
+    resume_rec = resume_recs[0]                       if resume_recs else None
+    notes_rec  = (notes_recs or [])[0] if notes_recs else None
 
     csv_source    = csv_rec.source_label    if csv_rec    else "csv"
     resume_source = resume_rec.source_label if resume_rec else "resume"
+    notes_source  = notes_rec.source_label  if notes_rec  else "notes"
 
     provenance: List[ProvenanceEntry] = []
     field_confidences: List[float] = []
@@ -393,18 +413,29 @@ def _merge_group(
     full_name = full_name or ""
 
     # --- emails: union of all normalized emails, deduplicated ---
-    emails = []
-    for raw_email in filter(None, [
-        csv_rec.email    if csv_rec    else None,
-        resume_rec.email if resume_rec else None,
-    ]):
+    # Track which sources actually contributed an email so provenance is accurate
+    # even when no CSV was provided (where csv_source is just a fallback literal).
+    emails: List[str] = []
+    _email_sources: List[str] = []
+    for raw_email, src in [
+        (csv_rec.email    if csv_rec    else None, csv_source    if csv_rec    else None),
+        (resume_rec.email if resume_rec else None, resume_source if resume_rec else None),
+    ]:
+        if not raw_email or src is None:
+            continue
         normalized = normalize_email(raw_email)
         if normalized and normalized not in emails:
             emails.append(normalized)
+            if src not in _email_sources:
+                _email_sources.append(src)
 
     if emails:
         track(1.0)
-        provenance.append(ProvenanceEntry(field="emails", source=csv_source, method="direct"))
+        provenance.append(ProvenanceEntry(
+            field="emails",
+            source="+".join(_email_sources),
+            method="direct",
+        ))
 
     # --- phones: union of all valid E.164 phones, deduplicated ---
     phones = []
@@ -435,10 +466,12 @@ def _merge_group(
         ))
 
     # --- links: resume wins (CSV has no link columns) ---
+    # RawResumeData defaults linkedin/github/portfolio to "" when not found;
+    # coerce empty strings to None so the JSON output emits null, not "".
     links = Links(
-        linkedin  = resume_rec.linkedin  if resume_rec else None,
-        github    = resume_rec.github    if resume_rec else None,
-        portfolio = resume_rec.portfolio if resume_rec else None,
+        linkedin  = (resume_rec.linkedin  or None) if resume_rec else None,
+        github    = (resume_rec.github    or None) if resume_rec else None,
+        portfolio = (resume_rec.portfolio or None) if resume_rec else None,
     )
     if any([links.linkedin, links.github, links.portfolio]):
         track(1.0)
@@ -481,6 +514,57 @@ def _merge_group(
     if education:
         track(1.0)
 
+    # --- notes: blend in additional data from recruiter notes ---
+    # Notes are processed AFTER resume so resume always wins for overlapping fields.
+    if notes_rec:
+        # Skills from notes: append any that aren't already in the skills list
+        if notes_rec.skills:
+            existing_names = {s.name for s in skills}
+            for raw_skill in notes_rec.skills:
+                canonical = canonicalize_skill(raw_skill)
+                if canonical in existing_names:
+                    # Skill already known — add notes as a second source
+                    for s in skills:
+                        if s.name == canonical and notes_source not in s.sources:
+                            s.sources.append(notes_source)
+                            # Confirmed by a second source → boost to 1.0 if it was lower
+                            s.confidence = max(s.confidence, 1.0)
+                else:
+                    # New skill seen only in notes — confidence 0.6 (observed, not self-reported)
+                    skills.append(Skill(name=canonical, confidence=0.6, sources=[notes_source]))
+                    existing_names.add(canonical)
+            provenance.append(ProvenanceEntry(
+                field="skills[notes]", source=notes_source, method="direct"
+            ))
+
+        # Location from notes: fill in only if resume gave us nothing
+        if not any(loc_dict.values()) and notes_rec.raw_location:
+            from transformer.normalize import parse_location as _parse_loc
+            notes_loc = _parse_loc(notes_rec.raw_location)
+            if any(notes_loc.values()):
+                location = Location(**notes_loc)
+                track(1.0)
+                provenance.append(ProvenanceEntry(
+                    field="location", source=notes_source, method="direct"
+                ))
+
+        # LinkedIn from notes: fill in only if resume gave us nothing
+        if notes_rec.linkedin and not links.linkedin:
+            links.linkedin = notes_rec.linkedin
+            provenance.append(ProvenanceEntry(
+                field="links.linkedin", source=notes_source, method="direct"
+            ))
+
+        # years_experience from notes: explicitly stated → confidence 0.6
+        # Only use if not already set (resume derivation takes priority)
+        if notes_rec.years_experience is not None and years_exp is None:
+            years_exp = notes_rec.years_experience
+            track(0.6)
+            provenance.append(ProvenanceEntry(
+                field="years_experience", source=notes_source,
+                method="explicitly-stated-in-notes"
+            ))
+
     # --- overall_confidence: mean of all populated field confidences ---
     overall_confidence = (
         round(sum(field_confidences) / len(field_confidences), 4)
@@ -511,6 +595,7 @@ def _merge_group(
 def merge_candidates(
     csv_records: List[RawCandidate],
     resume_records: List[RawResumeData],
+    notes_records: Optional[List[RawNotesData]] = None,
 ) -> List[CandidateProfile]:
     """
     Group all raw records by match key, then merge each group into one
@@ -528,22 +613,22 @@ def merge_candidates(
     Returns:
         List of CandidateProfile, one per unique candidate.
     """
-    # Filter out None resume records (failed extractions return None)
+    # Filter out None records (failed extractions return None)
     resume_records = [r for r in resume_records if r is not None]
+    notes_records  = [r for r in (notes_records or []) if r is not None]
 
-    # Build groups: match_key -> {"csv": [...], "resume": [...]}
+    # Build groups: match_key -> {"csv": [...], "resume": [...], "notes": [...]}
     groups: Dict[str, Dict[str, list]] = {}
 
     def _add_to_group(key: str, source_type: str, record: Any) -> None:
         if key not in groups:
-            groups[key] = {"csv": [], "resume": []}
+            groups[key] = {"csv": [], "resume": [], "notes": []}
         groups[key][source_type].append(record)
 
     # Index all CSV records
     for rec in csv_records:
         key = _match_key_for_csv(rec)
         if key is None:
-            # No email or phone — use name as a last-resort synthetic key
             synthetic = f"name:{normalize_name(rec.name).lower()}"
             logger.warning(
                 "CSV record for %r has no email or phone — using synthetic key %r.",
@@ -564,31 +649,40 @@ def merge_candidates(
             key = synthetic
         _add_to_group(key, "resume", rec)
 
+    # Index all notes records
+    for rec in notes_records:
+        key = _match_key_for_notes(rec)
+        if key is None:
+            synthetic = f"name:{normalize_name(rec.name).lower()}"
+            logger.warning(
+                "Notes record for %r has no email or phone — using synthetic key %r.",
+                rec.name, synthetic,
+            )
+            key = synthetic
+        _add_to_group(key, "notes", rec)
+
     # Merge each group
     profiles: List[CandidateProfile] = []
     for match_key, sources in groups.items():
         csv_recs    = sources["csv"]
         resume_recs = sources["resume"]
+        notes_recs  = sources["notes"]
 
         n_csv    = len(csv_recs)
         n_resume = len(resume_recs)
+        n_notes  = len(notes_recs)
 
         if n_csv > 1:
             logger.info(
                 "Duplicate CSV rows for match key %r (%d rows) — using first, discarding rest.",
                 match_key, n_csv,
             )
-        if n_resume > 1:
-            logger.info(
-                "Multiple resumes for match key %r (%d files) — using first.",
-                match_key, n_resume,
-            )
 
-        profile = _merge_group(csv_recs, resume_recs, match_key)
+        profile = _merge_group(csv_recs, resume_recs, match_key, notes_recs or None)
         profiles.append(profile)
         logger.info(
-            "Merged candidate %r (key=%r) from csv=%d, resume=%d source(s).",
-            profile.full_name, match_key, n_csv, n_resume,
+            "Merged candidate %r (key=%r) from csv=%d, resume=%d, notes=%d source(s).",
+            profile.full_name, match_key, n_csv, n_resume, n_notes,
         )
 
     return profiles
