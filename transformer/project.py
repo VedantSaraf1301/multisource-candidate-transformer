@@ -46,9 +46,7 @@ from transformer.normalize import normalize_phone, canonicalize_skill
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Config loading
-# ---------------------------------------------------------------------------
 
 def load_config(config: Union[str, Path, dict, None]) -> dict:
     """
@@ -77,9 +75,7 @@ def load_config(config: Union[str, Path, dict, None]) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
 # Path resolver
-# ---------------------------------------------------------------------------
 
 def _get_attr(obj: Any, key: str) -> Any:
     """Get a key from either a dict or an object (Pydantic model)."""
@@ -138,9 +134,7 @@ def _resolve_simple(obj: Any, path: str) -> Any:
     return current
 
 
-# ---------------------------------------------------------------------------
 # Normalizer registry
-# ---------------------------------------------------------------------------
 
 # Maps normalizer name (from config) → callable that transforms a value.
 # Add new normalizers here to extend the system without changing any other code.
@@ -165,9 +159,7 @@ def _apply_normalizer(value: Any, normalizer_name: str) -> Any:
     return fn(value)
 
 
-# ---------------------------------------------------------------------------
 # Full-schema (no fields config) serializer
-# ---------------------------------------------------------------------------
 
 def _serialize_full(profile: CandidateProfile, cfg: dict) -> dict:
     """
@@ -189,9 +181,7 @@ def _serialize_full(profile: CandidateProfile, cfg: dict) -> dict:
     return out
 
 
-# ---------------------------------------------------------------------------
 # Custom-fields projection
-# ---------------------------------------------------------------------------
 
 def _project_fields(profile: CandidateProfile, cfg: dict) -> dict:
     """
@@ -238,9 +228,7 @@ def _project_fields(profile: CandidateProfile, cfg: dict) -> dict:
     return out
 
 
-# ---------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
 
 def project(
     profile: CandidateProfile,

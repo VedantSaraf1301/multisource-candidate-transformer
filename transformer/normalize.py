@@ -23,9 +23,7 @@ from phonenumbers import PhoneNumberFormat, NumberParseException
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
 # Phone normalization
-# ---------------------------------------------------------------------------
 
 # Default region used when no country code is present in the raw phone string.
 # Change this constant to support a different default region.
@@ -68,9 +66,7 @@ def normalize_phone(raw: str) -> Optional[str]:
     return phonenumbers.format_number(parsed, PhoneNumberFormat.E164)
 
 
-# ---------------------------------------------------------------------------
 # Date normalization
-# ---------------------------------------------------------------------------
 
 # Month abbreviation / full-name → zero-padded month number
 _MONTH_MAP = {
@@ -139,9 +135,7 @@ def normalize_date(raw: str) -> Optional[str]:
     return None
 
 
-# ---------------------------------------------------------------------------
 # Skill canonicalization
-# ---------------------------------------------------------------------------
 
 # Canonical alias map: raw lowercase variant → canonical lowercase name.
 # Keep all aliases here — this is the single place to extend the mapping.
@@ -206,9 +200,7 @@ def canonicalize_skill(raw: str) -> str:
     return SKILL_ALIASES.get(cleaned, cleaned)
 
 
-# ---------------------------------------------------------------------------
 # Name normalization
-# ---------------------------------------------------------------------------
 
 def normalize_name(raw: str) -> str:
     """
@@ -222,9 +214,7 @@ def normalize_name(raw: str) -> str:
     return raw.strip().title()
 
 
-# ---------------------------------------------------------------------------
 # Location parsing
-# ---------------------------------------------------------------------------
 
 # Mapping of common country name variants (lowercase) → ISO-3166 alpha-2 code.
 # Extend this table to support more countries without changing any other code.
@@ -293,9 +283,7 @@ def parse_location(raw: str) -> dict:
     return {"city": city, "region": region, "country": country}
 
 
-# ---------------------------------------------------------------------------
 # Email normalization
-# ---------------------------------------------------------------------------
 
 def normalize_email(raw: str) -> Optional[str]:
     """

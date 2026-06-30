@@ -42,9 +42,7 @@ _RESUME_EXTENSIONS = {".pdf", ".docx"}
 _NOTES_EXTENSIONS = {".txt"}
 
 
-# ---------------------------------------------------------------------------
 # Internal helpers
-# ---------------------------------------------------------------------------
 
 def _collect_resume_files(resumes_dir: Path) -> List[Path]:
     """
@@ -66,9 +64,7 @@ def _collect_resume_files(resumes_dir: Path) -> List[Path]:
     return files
 
 
-# ---------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
 
 def run(
     csv_path: Optional[Union[str, Path]] = None,
@@ -92,7 +88,7 @@ def run(
         Each dict is directly serializable with json.dumps().
     """
 
-    # ── Stage 1a: Extract from CSV ────────────────────────────────────────
+    #Stage 1a: Extracting data from CSV 
     csv_records = []
     if csv_path is not None:
         # extract_from_csv already handles missing/corrupt files internally
@@ -102,7 +98,7 @@ def run(
     else:
         logger.info("No CSV path provided — skipping CSV source.")
 
-    # ── Stage 1b: Extract from resumes ───────────────────────────────────
+    # Stage 1b: Extracting data from resumes 
     resume_records = []
     if resumes_dir is not None:
         resume_files = _collect_resume_files(Path(resumes_dir))
@@ -115,7 +111,7 @@ def run(
     else:
         logger.info("No resumes directory provided — skipping resume source.")
 
-    # ── Stage 1c: Extract from recruiter notes ────────────────────────────
+    # Stage 1c: Extracting from recruiter notes 
     notes_records = []
     if notes_dir is not None:
         notes_path = Path(notes_dir)
@@ -134,12 +130,12 @@ def run(
     else:
         logger.info("No notes directory provided — skipping notes source.")
 
-    # Guard: nothing to process
+    #  Additional check for nothing to process
     if not csv_records and not resume_records:
         logger.warning("No records extracted from any source — returning empty output.")
         return []
 
-    # ── Stage 2: Merge ───────────────────────────────────────────────────
+    #Stage 2: Merge 
     profiles = merge_candidates(csv_records, resume_records, notes_records or None)
     logger.info("Merge stage: %d unique candidate profile(s) produced.", len(profiles))
 

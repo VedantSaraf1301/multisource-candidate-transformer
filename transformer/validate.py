@@ -16,9 +16,7 @@ surface a useful error instead of a bare AttributeError.
 import re
 from typing import Any, Dict, List, Optional
 
-# ---------------------------------------------------------------------------
 # Custom exception
-# ---------------------------------------------------------------------------
 
 class ValidationError(Exception):
     """
@@ -29,9 +27,7 @@ class ValidationError(Exception):
     pass
 
 
-# ---------------------------------------------------------------------------
 # Regex patterns for format checks
-# ---------------------------------------------------------------------------
 
 # E.164: starts with +, then 7–15 digits
 _E164_RE = re.compile(r"^\+\d{7,15}$")
@@ -40,9 +36,7 @@ _E164_RE = re.compile(r"^\+\d{7,15}$")
 _YYYYMM_RE = re.compile(r"^\d{4}-\d{2}$")
 
 
-# ---------------------------------------------------------------------------
 # Type checker registry (used for custom-projection validation)
-# ---------------------------------------------------------------------------
 
 # Maps the "type" string from the projection config → a predicate that
 # returns True if the value is the right type.
@@ -54,18 +48,14 @@ _TYPE_CHECKERS: Dict[str, Any] = {
 }
 
 
-# ---------------------------------------------------------------------------
 # Small helper
-# ---------------------------------------------------------------------------
 
 def _err(candidate_id: str, field: str, msg: str) -> ValidationError:
     """Build a ValidationError with a consistent, descriptive message."""
     return ValidationError(f"[{candidate_id}] field '{field}': {msg}")
 
 
-# ---------------------------------------------------------------------------
 # Canonical schema validation
-# ---------------------------------------------------------------------------
 
 def _check_string(val: Any, field: str, cid: str, required: bool = True) -> None:
     """Assert val is a non-empty string when required, or str-or-None otherwise."""
@@ -205,9 +195,7 @@ def _validate_canonical(out: dict) -> None:
         _check_confidence(oc, "overall_confidence", cid)
 
 
-# ---------------------------------------------------------------------------
 # Custom-projection validation
-# ---------------------------------------------------------------------------
 
 def _validate_projection(out: dict, fields_config: List[dict]) -> None:
     """
@@ -241,9 +229,7 @@ def _validate_projection(out: dict, fields_config: List[dict]) -> None:
                 )
 
 
-# ---------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
 
 def validate(output_dict: dict, config: dict) -> None:
     """

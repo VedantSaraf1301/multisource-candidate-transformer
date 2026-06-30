@@ -42,9 +42,7 @@ from transformer.extractors.notes_extractor import RawNotesData
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
 # Trust ranking table
-# ---------------------------------------------------------------------------
 
 # When two sources both provide a value for the same field and the values differ,
 # the source listed here is authoritative. Everything not listed defaults to CSV.
@@ -56,9 +54,7 @@ def _winner_for(field: str) -> str:
     return "resume" if field in _RESUME_WINS_FIELDS else "csv"
 
 
-# ---------------------------------------------------------------------------
 # Match key derivation
-# ---------------------------------------------------------------------------
 
 def _match_key_for_csv(rec: RawCandidate) -> Optional[str]:
     """
@@ -106,9 +102,7 @@ def _candidate_id_from_key(match_key: str) -> str:
     return hashlib.sha1(match_key.encode()).hexdigest()[:16]
 
 
-# ---------------------------------------------------------------------------
 # Field-level resolver
-# ---------------------------------------------------------------------------
 
 def _resolve(
     field: str,
@@ -173,9 +167,7 @@ def _resolve(
     return chosen, 0.6
 
 
-# ---------------------------------------------------------------------------
 # Experience builder
-# ---------------------------------------------------------------------------
 
 def _build_experience(
     csv_rec: Optional[RawCandidate],
@@ -296,9 +288,7 @@ def _compute_years_experience(experience: List[Experience]) -> Optional[float]:
     return round(total_months / 12, 1)
 
 
-# ---------------------------------------------------------------------------
 # Skills builder
-# ---------------------------------------------------------------------------
 
 def _build_skills(
     resume_rec: Optional[RawResumeData],
@@ -331,9 +321,7 @@ def _build_skills(
     return list(seen.values())
 
 
-# ---------------------------------------------------------------------------
 # Education builder
-# ---------------------------------------------------------------------------
 
 def _build_education(
     resume_rec: Optional[RawResumeData],
@@ -366,9 +354,7 @@ def _build_education(
     return entries
 
 
-# ---------------------------------------------------------------------------
 # Per-group merge
-# ---------------------------------------------------------------------------
 
 def _merge_group(
     csv_recs: List[RawCandidate],
@@ -588,9 +574,7 @@ def _merge_group(
     )
 
 
-# ---------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
 
 def merge_candidates(
     csv_records: List[RawCandidate],

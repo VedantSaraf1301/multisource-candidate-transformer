@@ -22,9 +22,7 @@ from typing import List, Optional
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Raw data container
-# ---------------------------------------------------------------------------
 
 @dataclass
 class RawNotesData:
@@ -45,9 +43,7 @@ class RawNotesData:
     source_label: str = ""
 
 
-# ---------------------------------------------------------------------------
 # Compiled patterns
-# ---------------------------------------------------------------------------
 
 _EMAIL_RE    = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
 _PHONE_RE    = re.compile(r"[\+\(]?[\d][\d\s\-\(\)\.]{6,}[\d]")
@@ -81,9 +77,7 @@ _LOCATION_RE = re.compile(
 )
 
 
-# ---------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
 
 def extract_from_notes(notes_path: str | Path) -> Optional[RawNotesData]:
     """

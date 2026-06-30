@@ -31,9 +31,7 @@ from pathlib import Path
 from transformer.pipeline import run
 
 
-# ---------------------------------------------------------------------------
 # Logging setup
-# ---------------------------------------------------------------------------
 
 def _configure_logging(level_name: str) -> None:
     """
@@ -48,9 +46,7 @@ def _configure_logging(level_name: str) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
 # Argument parser
-# ---------------------------------------------------------------------------
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -106,9 +102,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-# ---------------------------------------------------------------------------
 # Entry point
-# ---------------------------------------------------------------------------
 
 def main() -> int:
     """

@@ -19,9 +19,7 @@ from typing import List, Optional, Dict
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------------
 # Raw data container
-# ---------------------------------------------------------------------------
 
 @dataclass
 class RawResumeData:
@@ -47,9 +45,7 @@ class RawResumeData:
     source_label: str = ""
 
 
-# ---------------------------------------------------------------------------
 # Compiled regex patterns (compiled once at import time for performance)
-# ---------------------------------------------------------------------------
 
 # Standard email pattern
 _EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
@@ -116,9 +112,7 @@ _DATE_RANGE_RE = re.compile(
 )
 
 
-# ---------------------------------------------------------------------------
 # Text extraction helpers
-# ---------------------------------------------------------------------------
 
 def _extract_text_from_pdf(path: Path) -> str:
     """Use pdfplumber to pull all text from every page of a PDF."""
@@ -139,9 +133,7 @@ def _extract_text_from_docx(path: Path) -> str:
     return "\n".join(p.text for p in doc.paragraphs)
 
 
-# ---------------------------------------------------------------------------
 # Section splitter
-# ---------------------------------------------------------------------------
 
 def _split_into_sections(text: str) -> Dict[str, str]:
     """
@@ -177,9 +169,7 @@ def _split_into_sections(text: str) -> Dict[str, str]:
     return {k: "\n".join(v).strip() for k, v in sections.items()}
 
 
-# ---------------------------------------------------------------------------
 # Section-specific parsers
-# ---------------------------------------------------------------------------
 
 def _parse_header(header_text: str) -> Dict:
     """
@@ -428,9 +418,7 @@ def _parse_education(edu_text: str) -> List[Dict]:
     return entries
 
 
-# ---------------------------------------------------------------------------
 # Public API
-# ---------------------------------------------------------------------------
 
 def extract_from_resume(resume_path: str | Path) -> Optional[RawResumeData]:
     """

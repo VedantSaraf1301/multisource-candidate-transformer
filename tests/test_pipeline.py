@@ -47,9 +47,7 @@ def _by_name(results, name):
     return next((r for r in results if r["full_name"] == name), None)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # 1. HAPPY PATH
-# ══════════════════════════════════════════════════════════════════════════════
 
 class TestHappyPath:
     """Full pipeline with both sources produces the expected output."""
@@ -105,9 +103,7 @@ class TestHappyPath:
             assert 0.0 <= oc <= 1.0, f"confidence {oc} out of range for {r['full_name']}"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # 2. DUPLICATE-MERGE
-# ══════════════════════════════════════════════════════════════════════════════
 
 class TestDuplicateMerge:
     """CSV rows 1 and 3 are exact duplicates (same email). Only one profile."""
@@ -143,9 +139,7 @@ class TestDuplicateMerge:
         assert len(conflict_entries) >= 1
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # 3. MISSING-SOURCE ROBUSTNESS
-# ══════════════════════════════════════════════════════════════════════════════
 
 class TestMissingSourceRobustness:
     """A bad or missing source must never crash the pipeline."""
@@ -191,9 +185,7 @@ class TestMissingSourceRobustness:
         assert isinstance(results, list)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # 4. CUSTOM-CONFIG PROJECTION
-# ══════════════════════════════════════════════════════════════════════════════
 
 class TestCustomConfigProjection:
     """The projection layer reshapes the output per the runtime config."""
@@ -301,9 +293,7 @@ class TestCustomConfigProjection:
         assert isinstance(priya["email"], str)   # string, not list
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # 5. NORMALIZATION
-# ══════════════════════════════════════════════════════════════════════════════
 
 class TestNormalization:
     """Field-level normalization correctness."""
@@ -348,9 +338,7 @@ class TestNormalization:
         assert loc["country"] == "IN"          # ISO-3166 alpha-2
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # 6. CONFIDENCE SCORING
-# ══════════════════════════════════════════════════════════════════════════════
 
 class TestConfidenceScoring:
     """Confidence heuristics produce the expected scores."""
@@ -383,9 +371,7 @@ class TestConfidenceScoring:
         assert "derived" in ye_prov["method"]
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # 7. VALIDATION
-# ══════════════════════════════════════════════════════════════════════════════
 
 class TestExtractors:
     """

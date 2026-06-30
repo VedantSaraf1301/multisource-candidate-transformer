@@ -12,9 +12,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 
 
-# ---------------------------------------------------------------------------
 # Sub-models (used as nested objects inside CandidateProfile)
-# ---------------------------------------------------------------------------
 
 class Location(BaseModel):
     """Geographic location of the candidate."""
@@ -71,9 +69,7 @@ class ProvenanceEntry(BaseModel):
     method: str   # e.g. "direct", "regex", "trust-ranking-conflict"
 
 
-# ---------------------------------------------------------------------------
 # Top-level canonical record
-# ---------------------------------------------------------------------------
 
 class CandidateProfile(BaseModel):
     """

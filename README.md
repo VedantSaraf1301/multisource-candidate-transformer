@@ -1,6 +1,6 @@
 # Multi-Source Candidate Data Transformer
 
-A Python pipeline that ingests recruiter data from three independent sources — a structured CSV, unstructured resume files (PDF/DOCX), and free-text recruiter notes (.txt) — merges them into canonical candidate profiles, and emits validated JSON.
+A Python pipeline that ingests recruiter data from three independent sources - a structured CSV, unstructured resume files (PDF/DOCX), and free-text recruiter notes (.txt) — merges them into canonical candidate profiles, and emits validated JSON.
 
 Built as a take-home assignment for the Eightfold AI Engineering Intern role.
 
