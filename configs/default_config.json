@@ -1,0 +1,6 @@
+{
+  "_comment": "Default output config: emit the full canonical schema with confidence and provenance.",
+  "include_confidence": true,
+  "include_provenance": true,
+  "on_missing": "null"
+}

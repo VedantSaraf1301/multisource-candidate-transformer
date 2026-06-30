@@ -1,0 +1,5 @@
+pydantic>=2.0
+phonenumbers
+pdfplumber
+python-docx
+pytest
